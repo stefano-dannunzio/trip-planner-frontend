@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-// Import Drag and Drop components
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 let DefaultIcon = L.icon({
@@ -47,17 +46,19 @@ function TripDetail() {
         trip: id
     });
 
+    // 1. Grab the token and create our Auth Header config
+    const token = localStorage.getItem('access_token');
+
+
     useEffect(() => {
-        // Fetch trip details
-        axios.get(`http://127.0.0.1:8000/api/trips/${id}/`)
+        // 2. Attach the config to both GET requests
+        api.get(`trips/${id}/`)
             .then(response => setTrip(response.data))
             .catch(error => console.error("Error fetching trip:", error));
 
-        // Fetch itinerary items
-        axios.get('http://127.0.0.1:8000/api/itinerary/')
+        api.get('itinerary/')
             .then(response => {
                 const tripItems = response.data.filter(item => item.trip == id);
-                // Sort by date, then by the "order" field
                 tripItems.sort((a, b) => new Date(a.date) - new Date(b.date) || a.order - b.order);
                 setItinerary(tripItems);
                 setIsLoading(false);
@@ -79,10 +80,10 @@ function TripDetail() {
             return;
         }
 
-        // Assign the order to the end of the current list
         const newItemData = { ...formData, order: itinerary.length };
 
-        axios.post('http://127.0.0.1:8000/api/itinerary/', newItemData)
+        // 3. Attach the config to the POST request
+        api.post('itinerary/', newItemData)
             .then(response => {
                 setItinerary([...itinerary, response.data]);
                 setShowForm(false);
@@ -91,33 +92,27 @@ function TripDetail() {
             .catch(error => console.error("Error saving place:", error));
     };
 
-    // --- Handle the end of a drag event ---
     const handleOnDragEnd = (result) => {
-        if (!result.destination) return; // If dropped outside the list, do nothing
+        if (!result.destination) return;
 
         const items = Array.from(itinerary);
-        // Remove the item from its original position
         const [reorderedItem] = items.splice(result.source.index, 1);
-        // Insert it into its new position
         items.splice(result.destination.index, 0, reorderedItem);
 
-        // Update React state immediately for a snappy UI
         setItinerary(items);
 
-        // Silently update the backend with the new "order" of each item
         items.forEach((item, index) => {
-            axios.patch(`http://127.0.0.1:8000/api/itinerary/${item.id}/`, { order: index })
+            // 4. Attach the config to the PATCH request
+            api.patch(`itinerary/${item.id}/`, { order: index })
                 .catch(err => console.error("Error updating order in Django:", err));
         });
     };
 
-    // --- NEW FUNCTION: Delete a place ---
     const handleDeletePlace = (itemId) => {
-        // Add a simple browser confirmation popup
         if (window.confirm("Are you sure you want to remove this place from your itinerary?")) {
-            axios.delete(`http://127.0.0.1:8000/api/itinerary/${itemId}/`)
+            // 5. Attach the config to the DELETE request
+            api.delete(`itinerary/${itemId}/`)
                 .then(() => {
-                    // If successful, filter out the deleted item from our React state instantly
                     setItinerary(prevItinerary => prevItinerary.filter(item => item.id !== itemId));
                 })
                 .catch(error => console.error("Error deleting place:", error));
@@ -187,8 +182,9 @@ function TripDetail() {
                                                         <p className="text-xs text-blue-300">{item.date}</p>
                                                         {item.notes && <p className="text-xs text-gray-400 mt-1">{item.notes}</p>}
                                                     </div>
+
                                                     <div className="flex items-center gap-3">
-                                                        {/* The Delete Button */}
+                                                        {/* Delete Button */}
                                                         <button
                                                             onClick={() => handleDeletePlace(item.id)}
                                                             className="text-red-400 hover:text-red-300 transition-colors p-1"
@@ -196,12 +192,12 @@ function TripDetail() {
                                                         >
                                                             🗑️
                                                         </button>
-
-                                                        {/* The Drag Handle */}
+                                                        {/* Drag Handle */}
                                                         <div className="text-gray-500 cursor-grab active:cursor-grabbing text-xl">
                                                             ☰
                                                         </div>
                                                     </div>
+
                                                 </div>
                                             )}
                                         </Draggable>
@@ -219,7 +215,6 @@ function TripDetail() {
                         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                         <LocationPicker setFormData={setFormData} />
 
-                        {/* Render saved places */}
                         {itinerary.map(item => (
                             <Marker key={item.id} position={[item.latitude, item.longitude]}>
                                 <Popup className="text-gray-900 font-bold">
@@ -228,7 +223,6 @@ function TripDetail() {
                             </Marker>
                         ))}
 
-                        {/* RESTORED: Render a temporary marker showing where the user just clicked */}
                         {formData.latitude && formData.longitude && (
                             <Marker position={[formData.latitude, formData.longitude]} opacity={0.5}>
                                 <Popup>New Place Location</Popup>

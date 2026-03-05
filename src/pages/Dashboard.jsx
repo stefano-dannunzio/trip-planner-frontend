@@ -1,15 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { Link, useNavigate } from 'react-router-dom'; // <-- Added useNavigate
+import api from '../api';
 
 function Dashboard() {
-    // 1. State for our trips list
     const [trips, setTrips] = useState([]);
-
-    // 2. State to toggle the form visibility
     const [showForm, setShowForm] = useState(false);
-
-    // 3. State to hold the data the user types into the form
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -17,14 +12,33 @@ function Dashboard() {
         end_date: '',
     });
 
-    // Fetch trips when the page loads
-    useEffect(() => {
-        axios.get('http://127.0.0.1:8000/api/trips/')
-            .then(response => setTrips(response.data))
-            .catch(error => console.error("Error fetching trips:", error));
-    }, []);
+    const navigate = useNavigate(); // <-- Initialize the navigation hook
 
-    // Handle typing in the input fields
+    useEffect(() => {
+        const token = localStorage.getItem('access_token');
+
+        // If there is no token at all, send them straight to login
+        if (!token) {
+            navigate('/login');
+            return;
+        }
+
+        const config = {
+            headers: { Authorization: `Bearer ${token}` }
+        };
+
+        api.get('trips/', config)
+            .then(response => setTrips(response.data))
+            .catch(error => {
+                console.error("Error fetching trips:", error);
+                // If the token is expired or invalid, Django returns a 401. 
+                // We should log them out automatically.
+                if (error.response && error.response.status === 401) {
+                    handleLogout();
+                }
+            });
+    }, [navigate]);
+
     const handleChange = (e) => {
         setFormData({
             ...formData,
@@ -32,41 +46,60 @@ function Dashboard() {
         });
     };
 
-    // Handle the form submission
     const handleSubmit = (e) => {
-        e.preventDefault(); // Prevents the page from reloading
+        e.preventDefault();
+        const token = localStorage.getItem('access_token');
 
-        // We inject the owner ID here temporarily until we have a real login system
-        const dataToSend = { ...formData, owner: 1 };
 
-        axios.post('http://127.0.0.1:8000/api/trips/', dataToSend)
+        api.post('trips/', formData)
             .then(response => {
-                // Success! Add the new trip to our list so it appears instantly
                 setTrips([...trips, response.data]);
-
-                // Hide the form and reset the inputs
                 setShowForm(false);
                 setFormData({ title: '', description: '', start_date: '', end_date: '' });
             })
             .catch(error => {
-                console.error("Error creating trip:", error.response?.data || error);
-                alert("There was an error creating the trip. Check the console.");
+                console.error("Error creating trip:", error);
+                alert("There was an error creating the trip.");
             });
+    };
+
+    // --- NEW FUNCTION: Handle Logout ---
+    const handleLogout = () => {
+        // 1. Remove the tokens from the browser's local storage
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+
+        // 2. Redirect the user back to the login page
+        navigate('/login');
     };
 
     return (
         <div className="min-h-screen p-8 max-w-6xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
-                <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 pb-4">
+
+            {/* --- HEADER SECTION --- */}
+            <div className="flex justify-between items-center mb-8 bg-gray-800 p-4 rounded-xl border border-gray-700 shadow-sm">
+                <h1 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
                     🌍 My Trips Dashboard
                 </h1>
-                {/* Toggle the form visibility when clicked */}
-                <button
-                    onClick={() => setShowForm(!showForm)}
-                    className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
-                >
-                    {showForm ? 'Cancel' : '+ New Trip'}
-                </button>
+
+                {/* Button Group */}
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => setShowForm(!showForm)}
+                        className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+                    >
+                        {showForm ? 'Cancel' : '+ New Trip'}
+                    </button>
+
+                    {/* THE LOGOUT BUTTON */}
+                    <button
+                        onClick={handleLogout}
+                        className="bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/50 px-4 py-2 rounded-lg font-semibold transition-all"
+                        title="Sign Out"
+                    >
+                        Log Out 🚪
+                    </button>
+                </div>
             </div>
 
             {/* --- THE CREATION FORM --- */}
@@ -77,51 +110,19 @@ function Dashboard() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
                             <label className="block text-gray-400 text-sm mb-1">Trip Title</label>
-                            <input
-                                type="text"
-                                name="title"
-                                value={formData.title}
-                                onChange={handleChange}
-                                required
-                                className="w-full bg-gray-700 text-white border border-gray-600 rounded p-2 focus:outline-none focus:border-blue-500"
-                                placeholder="e.g., Summer in Kyoto"
-                            />
+                            <input type="text" name="title" value={formData.title} onChange={handleChange} required className="w-full bg-gray-700 text-white border border-gray-600 rounded p-2 focus:outline-none focus:border-blue-500" placeholder="e.g., Summer in Kyoto" />
                         </div>
-
                         <div>
                             <label className="block text-gray-400 text-sm mb-1">Description</label>
-                            <input
-                                type="text"
-                                name="description"
-                                value={formData.description}
-                                onChange={handleChange}
-                                className="w-full bg-gray-700 text-white border border-gray-600 rounded p-2 focus:outline-none focus:border-blue-500"
-                                placeholder="A brief summary of the trip"
-                            />
+                            <input type="text" name="description" value={formData.description} onChange={handleChange} className="w-full bg-gray-700 text-white border border-gray-600 rounded p-2 focus:outline-none focus:border-blue-500" placeholder="A brief summary" />
                         </div>
-
                         <div>
                             <label className="block text-gray-400 text-sm mb-1">Start Date</label>
-                            <input
-                                type="date"
-                                name="start_date"
-                                value={formData.start_date}
-                                onChange={handleChange}
-                                required
-                                className="w-full bg-gray-700 text-white border border-gray-600 rounded p-2 focus:outline-none focus:border-blue-500"
-                            />
+                            <input type="date" name="start_date" value={formData.start_date} onChange={handleChange} required className="w-full bg-gray-700 text-white border border-gray-600 rounded p-2 focus:outline-none focus:border-blue-500" />
                         </div>
-
                         <div>
                             <label className="block text-gray-400 text-sm mb-1">End Date</label>
-                            <input
-                                type="date"
-                                name="end_date"
-                                value={formData.end_date}
-                                onChange={handleChange}
-                                required
-                                className="w-full bg-gray-700 text-white border border-gray-600 rounded p-2 focus:outline-none focus:border-blue-500"
-                            />
+                            <input type="date" name="end_date" value={formData.end_date} onChange={handleChange} required className="w-full bg-gray-700 text-white border border-gray-600 rounded p-2 focus:outline-none focus:border-blue-500" />
                         </div>
                     </div>
 
@@ -130,11 +131,13 @@ function Dashboard() {
                     </button>
                 </form>
             )}
-            {/* --- END OF FORM --- */}
 
-            {/* The Grid of Trips */}
+            {/* --- THE GRID OF TRIPS --- */}
             {trips.length === 0 ? (
-                <p className="text-gray-400 text-lg">Loading trips or no trips created yet...</p>
+                <div className="text-center py-12">
+                    <p className="text-gray-400 text-lg">No trips created yet.</p>
+                    <p className="text-gray-500 text-sm mt-2">Click "+ New Trip" to start planning!</p>
+                </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {trips.map(trip => (

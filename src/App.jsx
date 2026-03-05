@@ -1,23 +1,70 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import TripDetail from './pages/TripDetail';
+import Login from './pages/Login';
+
+
+// --- NEW: Protected Route Wrapper ---
+// This checks for a token. If it's missing, it kicks the user to the login screen.
+function ProtectedRoute({ children }) {
+  const token = localStorage.getItem('access_token');
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
+// --- NEW: Public Route Wrapper ---
+// This checks for a token. If it EXISTS, it prevents the user from seeing 
+// the login page and pushes them directly to the dashboard.
+function PublicRoute({ children }) {
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+}
 
 function App() {
+  // A quick check for the root "/" redirect
+  const isAuthenticated = !!localStorage.getItem('access_token');
+
   return (
-    // BrowserRouter wraps our entire app to enable routing features
     <BrowserRouter>
       <Routes>
-        {/* If the user goes to the root URL ("/"), redirect them to the dashboard */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        {/* Smart redirect for the root URL based on login status */}
+        <Route
+          path="/"
+          element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />}
+        />
 
-        {/* Define the paths for our actual pages */}
-        <Route path="/dashboard" element={<Dashboard />} />
+        {/* We wrap the Login page in the PublicRoute */}
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          }
+        />
 
-        {/* The ":id" means this part of the URL is dynamic (a variable) */}
-        <Route path="/trip/:id" element={<TripDetail />} />
-
-        {/* A simple placeholder for our future login page */}
-        <Route path="/login" element={<div style={{ padding: '20px' }}><h1>Login Page 🔐</h1></div>} />
+        {/* We wrap our private pages in the ProtectedRoute */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trip/:id"
+          element={
+            <ProtectedRoute>
+              <TripDetail />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );
