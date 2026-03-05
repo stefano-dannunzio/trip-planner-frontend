@@ -63,7 +63,7 @@ function Login() {
     // --- NEW: Trigger the GitHub Redirect ---
     const handleGithubLogin = () => {
         // The exact same URL we put in the GitHub settings earlier
-        const redirectUri = 'http://localhost:5173/login';
+        const redirectUri = `${window.location.origin}/login`;
         // Send the user to GitHub!
         window.location.href = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${redirectUri}&scope=user:email`;
     };
