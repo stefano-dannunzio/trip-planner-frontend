@@ -1,16 +1,38 @@
-# React + Vite
+# Trip Planner Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, responsive React application built with Vite and Tailwind CSS. This frontend provides the user interface for the Trip Planner platform, allowing users to visually plan and manage their travel itineraries.
 
-Currently, two official plugins are available:
+## Architecture
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+This repository contains the frontend component of a decoupled web application. It is designed as a Single Page Application (SPA) that communicates with a separate Django REST API.
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **React:** For building a dynamic user interface.
+- **Vite:** As a fast and modern build tool.
+- **Tailwind CSS:** For efficient, utility-first styling.
+- **React Leaflet:** For interactive map visualizations.
+- **Hello Pangea DND:** For smooth drag-and-drop itinerary reordering.
+- **Axios:** For handling API communication.
 
-## Expanding the ESLint configuration
+## Setup Instructions
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. Navigate to this directory.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Configure environment variables in a `.env` file (see `.env.example`).
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+## Key Features
+
+- **GitHub OAuth Integration:** Secure login using GitHub accounts.
+- **Interactive Map:** Add locations to your itinerary by clicking on a map.
+- **Drag-and-Drop Itinerary:** Reorder your travel plans with an intuitive interface.
+- **Trip Dashboard:** Create and manage multiple trips.
+- **Protected Routes:** Secure access to user-specific trip data.
+- **Automatic Token Refresh:** Seamless handling of JWT expiration.
