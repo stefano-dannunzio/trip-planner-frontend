@@ -1,27 +1,31 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import api from '../api'; // We are using our clean API instance now!
+import api from '../api';
 
-// 👇 PASTE YOUR GITHUB CLIENT ID HERE 👇
 const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID;
 
+/**
+ * Login component handling both standard and GitHub OAuth authentication.
+ * 
+ * @returns {JSX.Element} The rendered login page.
+ */
 function Login() {
     const [credentials, setCredentials] = useState({ username: '', password: '' });
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
-    const location = useLocation(); // Allows us to read the URL
+    const location = useLocation();
 
-    // --- NEW: Intercept the GitHub Redirect ---
     useEffect(() => {
-        // Check if there is a "?code=..." in the URL
+        /**
+         * Intercepts the GitHub OAuth redirect and exchanges the code for tokens.
+         */
         const searchParams = new URLSearchParams(location.search);
         const code = searchParams.get('code');
 
         if (code) {
             setIsLoading(true);
 
-            // We found a code! Send it to our future Django endpoint
             api.post('auth/github/', { code: code })
                 .then(response => {
                     localStorage.setItem('access_token', response.data.access);
@@ -32,16 +36,23 @@ function Login() {
                     console.error("GitHub Login error:", err);
                     setError('Failed to log in with GitHub. Please try again.');
                     setIsLoading(false);
-                    // Remove the failed code from the URL so it doesn't get stuck in a loop
                     navigate('/login', { replace: true });
                 });
         }
     }, [location, navigate]);
 
+    /**
+     * Handles input changes for the login form.
+     * @param {React.ChangeEvent<HTMLInputElement>} e 
+     */
     const handleChange = (e) => {
         setCredentials({ ...credentials, [e.target.name]: e.target.value });
     };
 
+    /**
+     * Handles standard username/password login submission.
+     * @param {React.FormEvent} e 
+     */
     const handleSubmit = (e) => {
         e.preventDefault();
         setError('');
@@ -60,11 +71,11 @@ function Login() {
             });
     };
 
-    // --- NEW: Trigger the GitHub Redirect ---
+    /**
+     * Redirects the user to GitHub for OAuth authorization.
+     */
     const handleGithubLogin = () => {
-        // The exact same URL we put in the GitHub settings earlier
         const redirectUri = `${window.location.origin}/login`;
-        // Send the user to GitHub!
         window.location.href = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${redirectUri}&scope=user:email`;
     };
 
@@ -88,7 +99,6 @@ function Login() {
                     </div>
                 ) : (
                     <>
-                        {/* The GitHub Button */}
                         <button
                             onClick={handleGithubLogin}
                             className="w-full flex items-center justify-center gap-3 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition-colors mb-6 border border-gray-600"
@@ -105,11 +115,10 @@ function Login() {
                             <div className="flex-grow border-t border-gray-600"></div>
                         </div>
 
-                        {/* Standard Django Login Form */}
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-1">Username</label>
-                                <input type="text" name="username" value={credentials.username} onChange={handleChange} required className="w-full bg-gray-700 text-white border border-gray-600 rounded-lg p-3 focus:outline-none focus:border-blue-500" placeholder="Enter your Django username" />
+                                <input type="text" name="username" value={credentials.username} onChange={handleChange} required className="w-full bg-gray-700 text-white border border-gray-600 rounded-lg p-3 focus:outline-none focus:border-blue-500" placeholder="Username" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>

@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // <-- Added useNavigate
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 
+/**
+ * Dashboard component displaying the user's trips and a form to create new ones.
+ * 
+ * @returns {JSX.Element} The rendered dashboard.
+ */
 function Dashboard() {
     const [trips, setTrips] = useState([]);
     const [showForm, setShowForm] = useState(false);
@@ -12,33 +17,30 @@ function Dashboard() {
         end_date: '',
     });
 
-    const navigate = useNavigate(); // <-- Initialize the navigation hook
+    const navigate = useNavigate();
 
     useEffect(() => {
         const token = localStorage.getItem('access_token');
 
-        // If there is no token at all, send them straight to login
         if (!token) {
             navigate('/login');
             return;
         }
 
-        const config = {
-            headers: { Authorization: `Bearer ${token}` }
-        };
-
-        api.get('trips/', config)
+        api.get('trips/')
             .then(response => setTrips(response.data))
             .catch(error => {
                 console.error("Error fetching trips:", error);
-                // If the token is expired or invalid, Django returns a 401. 
-                // We should log them out automatically.
                 if (error.response && error.response.status === 401) {
                     handleLogout();
                 }
             });
     }, [navigate]);
 
+    /**
+     * Handles input changes for the new trip form.
+     * @param {React.ChangeEvent<HTMLInputElement>} e 
+     */
     const handleChange = (e) => {
         setFormData({
             ...formData,
@@ -46,11 +48,12 @@ function Dashboard() {
         });
     };
 
+    /**
+     * Handles the submission of a new trip.
+     * @param {React.FormEvent} e 
+     */
     const handleSubmit = (e) => {
         e.preventDefault();
-        const token = localStorage.getItem('access_token');
-
-
         api.post('trips/', formData)
             .then(response => {
                 setTrips([...trips, response.data]);
@@ -63,26 +66,22 @@ function Dashboard() {
             });
     };
 
-    // --- NEW FUNCTION: Handle Logout ---
+    /**
+     * Logs the user out by clearing local storage and navigating to login.
+     */
     const handleLogout = () => {
-        // 1. Remove the tokens from the browser's local storage
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-
-        // 2. Redirect the user back to the login page
         navigate('/login');
     };
 
     return (
         <div className="min-h-screen p-8 max-w-6xl mx-auto">
-
-            {/* --- HEADER SECTION --- */}
             <div className="flex justify-between items-center mb-8 bg-gray-800 p-4 rounded-xl border border-gray-700 shadow-sm">
                 <h1 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
                     🌍 My Trips Dashboard
                 </h1>
 
-                {/* Button Group */}
                 <div className="flex gap-3">
                     <button
                         onClick={() => setShowForm(!showForm)}
@@ -91,7 +90,6 @@ function Dashboard() {
                         {showForm ? 'Cancel' : '+ New Trip'}
                     </button>
 
-                    {/* THE LOGOUT BUTTON */}
                     <button
                         onClick={handleLogout}
                         className="bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/50 px-4 py-2 rounded-lg font-semibold transition-all"
@@ -102,7 +100,6 @@ function Dashboard() {
                 </div>
             </div>
 
-            {/* --- THE CREATION FORM --- */}
             {showForm && (
                 <form onSubmit={handleSubmit} className="bg-gray-800 p-6 rounded-xl mb-8 border border-gray-700 shadow-xl">
                     <h2 className="text-2xl font-bold text-white mb-4">Plan a New Adventure</h2>
@@ -132,7 +129,6 @@ function Dashboard() {
                 </form>
             )}
 
-            {/* --- THE GRID OF TRIPS --- */}
             {trips.length === 0 ? (
                 <div className="text-center py-12">
                     <p className="text-gray-400 text-lg">No trips created yet.</p>

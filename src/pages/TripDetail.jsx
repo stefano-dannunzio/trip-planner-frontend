@@ -16,7 +16,12 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// --- Map Click Listener Component ---
+/**
+ * Component to handle map click events and update form coordinates.
+ * 
+ * @param {Object} props
+ * @param {Function} props.setFormData
+ */
 function LocationPicker({ setFormData }) {
     useMapEvents({
         click(e) {
@@ -30,6 +35,11 @@ function LocationPicker({ setFormData }) {
     return null;
 }
 
+/**
+ * Component to display and manage details of a specific trip, including its itinerary.
+ * 
+ * @returns {JSX.Element}
+ */
 function TripDetail() {
     const { id } = useParams();
     const [trip, setTrip] = useState(null);
@@ -46,12 +56,7 @@ function TripDetail() {
         trip: id
     });
 
-    // 1. Grab the token and create our Auth Header config
-    const token = localStorage.getItem('access_token');
-
-
     useEffect(() => {
-        // 2. Attach the config to both GET requests
         api.get(`trips/${id}/`)
             .then(response => setTrip(response.data))
             .catch(error => console.error("Error fetching trip:", error));
@@ -69,10 +74,18 @@ function TripDetail() {
             });
     }, [id]);
 
+    /**
+     * Handles input changes for the itinerary item form.
+     * @param {React.ChangeEvent<HTMLInputElement>} e 
+     */
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    /**
+     * Handles the addition of a new place to the itinerary.
+     * @param {React.FormEvent} e 
+     */
     const handleAddPlace = (e) => {
         e.preventDefault();
         if (!formData.latitude || !formData.longitude) {
@@ -82,7 +95,6 @@ function TripDetail() {
 
         const newItemData = { ...formData, order: itinerary.length };
 
-        // 3. Attach the config to the POST request
         api.post('itinerary/', newItemData)
             .then(response => {
                 setItinerary([...itinerary, response.data]);
@@ -92,6 +104,10 @@ function TripDetail() {
             .catch(error => console.error("Error saving place:", error));
     };
 
+    /**
+     * Handles reordering of itinerary items after a drag-and-drop operation.
+     * @param {Object} result 
+     */
     const handleOnDragEnd = (result) => {
         if (!result.destination) return;
 
@@ -102,15 +118,17 @@ function TripDetail() {
         setItinerary(items);
 
         items.forEach((item, index) => {
-            // 4. Attach the config to the PATCH request
             api.patch(`itinerary/${item.id}/`, { order: index })
-                .catch(err => console.error("Error updating order in Django:", err));
+                .catch(err => console.error("Error updating order:", err));
         });
     };
 
+    /**
+     * Handles the deletion of an itinerary item.
+     * @param {number} itemId 
+     */
     const handleDeletePlace = (itemId) => {
         if (window.confirm("Are you sure you want to remove this place from your itinerary?")) {
-            // 5. Attach the config to the DELETE request
             api.delete(`itinerary/${itemId}/`)
                 .then(() => {
                     setItinerary(prevItinerary => prevItinerary.filter(item => item.id !== itemId));
@@ -135,8 +153,6 @@ function TripDetail() {
             </div>
 
             <div className="flex flex-col lg:flex-row gap-6 flex-grow">
-
-                {/* LEFT COLUMN: Itinerary */}
                 <div className="lg:w-1/3 bg-gray-800 border border-gray-700 rounded-xl p-6 shadow-xl flex flex-col overflow-y-auto max-h-[700px]">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-2xl font-bold text-white">Itinerary</h2>
@@ -150,7 +166,7 @@ function TripDetail() {
 
                     {showForm && (
                         <form onSubmit={handleAddPlace} className="bg-gray-700 p-4 rounded-lg mb-4 border border-gray-600">
-                            <p className="text-sm text-blue-300 mb-3 animate-pulse">👉 Click on the map for coordinates!</p>
+                            <p className="text-sm text-blue-300 mb-3 animate-pulse">Click on the map to set coordinates.</p>
                             <input type="text" name="place_name" value={formData.place_name} onChange={handleInputChange} required placeholder="Name (e.g. Louvre Museum)" className="w-full bg-gray-800 text-white mb-2 p-2 rounded text-sm" />
                             <input type="date" name="date" value={formData.date} onChange={handleInputChange} required className="w-full bg-gray-800 text-white mb-2 p-2 rounded text-sm" />
                             <input type="text" name="notes" value={formData.notes} onChange={handleInputChange} placeholder="Notes (optional)" className="w-full bg-gray-800 text-white mb-3 p-2 rounded text-sm" />
@@ -158,7 +174,6 @@ function TripDetail() {
                         </form>
                     )}
 
-                    {/* THE DRAGGABLE LIST */}
                     <DragDropContext onDragEnd={handleOnDragEnd}>
                         <Droppable droppableId="itinerary-list">
                             {(provided) => (
@@ -184,7 +199,6 @@ function TripDetail() {
                                                     </div>
 
                                                     <div className="flex items-center gap-3">
-                                                        {/* Delete Button */}
                                                         <button
                                                             onClick={() => handleDeletePlace(item.id)}
                                                             className="text-red-400 hover:text-red-300 transition-colors p-1"
@@ -192,12 +206,10 @@ function TripDetail() {
                                                         >
                                                             🗑️
                                                         </button>
-                                                        {/* Drag Handle */}
                                                         <div className="text-gray-500 cursor-grab active:cursor-grabbing text-xl">
                                                             ☰
                                                         </div>
                                                     </div>
-
                                                 </div>
                                             )}
                                         </Draggable>
@@ -209,7 +221,6 @@ function TripDetail() {
                     </DragDropContext>
                 </div>
 
-                {/* RIGHT COLUMN: Map */}
                 <div className="lg:w-2/3 bg-gray-800 border border-gray-700 rounded-xl p-2 shadow-xl overflow-hidden min-h-[500px]">
                     <MapContainer center={mapCenter} zoom={13} className="w-full h-full rounded-lg z-0">
                         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
@@ -230,7 +241,6 @@ function TripDetail() {
                         )}
                     </MapContainer>
                 </div>
-
             </div>
         </div>
     );

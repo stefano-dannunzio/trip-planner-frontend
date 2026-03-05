@@ -3,9 +3,14 @@ import Dashboard from './pages/Dashboard';
 import TripDetail from './pages/TripDetail';
 import Login from './pages/Login';
 
-
-// --- NEW: Protected Route Wrapper ---
-// This checks for a token. If it's missing, it kicks the user to the login screen.
+/**
+ * Higher-order component to protect routes that require authentication.
+ * Redirects to login if no access token is found.
+ * 
+ * @param {Object} props
+ * @param {React.ReactNode} props.children
+ * @returns {JSX.Element}
+ */
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('access_token');
   if (!token) {
@@ -14,9 +19,14 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-// --- NEW: Public Route Wrapper ---
-// This checks for a token. If it EXISTS, it prevents the user from seeing 
-// the login page and pushes them directly to the dashboard.
+/**
+ * Higher-order component to handle public routes.
+ * Redirects to dashboard if an access token is already present.
+ * 
+ * @param {Object} props
+ * @param {React.ReactNode} props.children
+ * @returns {JSX.Element}
+ */
 function PublicRoute({ children }) {
   const token = localStorage.getItem('access_token');
   if (token) {
@@ -25,20 +35,21 @@ function PublicRoute({ children }) {
   return children;
 }
 
+/**
+ * Main Application component defining the routing structure.
+ * 
+ * @returns {JSX.Element}
+ */
 function App() {
-  // A quick check for the root "/" redirect
   const isAuthenticated = !!localStorage.getItem('access_token');
 
   return (
     <BrowserRouter>
       <Routes>
-        {/* Smart redirect for the root URL based on login status */}
         <Route
           path="/"
           element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />}
         />
-
-        {/* We wrap the Login page in the PublicRoute */}
         <Route
           path="/login"
           element={
@@ -47,8 +58,6 @@ function App() {
             </PublicRoute>
           }
         />
-
-        {/* We wrap our private pages in the ProtectedRoute */}
         <Route
           path="/dashboard"
           element={
