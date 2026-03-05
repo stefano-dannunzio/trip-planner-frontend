@@ -1,6 +1,26 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
+import { 
+    Navbar, 
+    NavbarBrand, 
+    NavbarContent, 
+    NavbarItem, 
+    Button, 
+    Card, 
+    CardHeader, 
+    CardBody, 
+    CardFooter,
+    Modal, 
+    ModalContent, 
+    ModalHeader, 
+    ModalBody, 
+    ModalFooter,
+    Input,
+    Textarea,
+    useDisclosure,
+    Chip
+} from "@heroui/react";
 
 /**
  * Dashboard component displaying the user's trips and a form to create new ones.
@@ -9,7 +29,7 @@ import api from '../api';
  */
 function Dashboard() {
     const [trips, setTrips] = useState([]);
-    const [showForm, setShowForm] = useState(false);
+    const { isOpen, onOpen, onOpenChange } = useDisclosure();
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -50,15 +70,14 @@ function Dashboard() {
 
     /**
      * Handles the submission of a new trip.
-     * @param {React.FormEvent} e 
+     * @param {Function} onClose - Callback to close the modal
      */
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const handleSubmit = (onClose) => {
         api.post('trips/', formData)
             .then(response => {
                 setTrips([...trips, response.data]);
-                setShowForm(false);
                 setFormData({ title: '', description: '', start_date: '', end_date: '' });
+                onClose();
             })
             .catch(error => {
                 console.error("Error creating trip:", error);
@@ -76,85 +95,178 @@ function Dashboard() {
     };
 
     return (
-        <div className="min-h-screen p-8 max-w-6xl mx-auto">
-            <div className="flex justify-between items-center mb-8 bg-gray-800 p-4 rounded-xl border border-gray-700 shadow-sm">
-                <h1 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
-                    🌍 My Trips Dashboard
-                </h1>
-
-                <div className="flex gap-3">
-                    <button
-                        onClick={() => setShowForm(!showForm)}
-                        className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
-                    >
-                        {showForm ? 'Cancel' : '+ New Trip'}
-                    </button>
-
-                    <button
-                        onClick={handleLogout}
-                        className="bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/50 px-4 py-2 rounded-lg font-semibold transition-all"
-                        title="Sign Out"
-                    >
-                        Log Out 🚪
-                    </button>
-                </div>
-            </div>
-
-            {showForm && (
-                <form onSubmit={handleSubmit} className="bg-gray-800 p-6 rounded-xl mb-8 border border-gray-700 shadow-xl">
-                    <h2 className="text-2xl font-bold text-white mb-4">Plan a New Adventure</h2>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label className="block text-gray-400 text-sm mb-1">Trip Title</label>
-                            <input type="text" name="title" value={formData.title} onChange={handleChange} required className="w-full bg-gray-700 text-white border border-gray-600 rounded p-2 focus:outline-none focus:border-blue-500" placeholder="e.g., Summer in Kyoto" />
-                        </div>
-                        <div>
-                            <label className="block text-gray-400 text-sm mb-1">Description</label>
-                            <input type="text" name="description" value={formData.description} onChange={handleChange} className="w-full bg-gray-700 text-white border border-gray-600 rounded p-2 focus:outline-none focus:border-blue-500" placeholder="A brief summary" />
-                        </div>
-                        <div>
-                            <label className="block text-gray-400 text-sm mb-1">Start Date</label>
-                            <input type="date" name="start_date" value={formData.start_date} onChange={handleChange} required className="w-full bg-gray-700 text-white border border-gray-600 rounded p-2 focus:outline-none focus:border-blue-500" />
-                        </div>
-                        <div>
-                            <label className="block text-gray-400 text-sm mb-1">End Date</label>
-                            <input type="date" name="end_date" value={formData.end_date} onChange={handleChange} required className="w-full bg-gray-700 text-white border border-gray-600 rounded p-2 focus:outline-none focus:border-blue-500" />
-                        </div>
-                    </div>
-
-                    <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded transition-colors">
-                        Save Trip
-                    </button>
-                </form>
-            )}
-
-            {trips.length === 0 ? (
-                <div className="text-center py-12">
-                    <p className="text-gray-400 text-lg">No trips created yet.</p>
-                    <p className="text-gray-500 text-sm mt-2">Click "+ New Trip" to start planning!</p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {trips.map(trip => (
-                        <Link
-                            to={`/trip/${trip.id}`}
-                            key={trip.id}
-                            className="block bg-gray-800 border border-gray-700 rounded-xl p-6 shadow-lg hover:-translate-y-1 hover:shadow-blue-500/20 transition-all duration-300"
+        <div className="min-h-screen bg-black/95 text-foreground">
+            {/* --- NAVIGATION --- */}
+            <Navbar isBordered className="bg-white/5 backdrop-blur-md border-white/10">
+                <NavbarBrand>
+                    <p className="font-bold text-inherit text-xl tracking-tighter">
+                        <span className="text-primary">TRIP</span>PLANNER
+                    </p>
+                </NavbarBrand>
+                <NavbarContent justify="end">
+                    <NavbarItem>
+                        <Button 
+                            color="primary" 
+                            variant="flat" 
+                            className="font-semibold"
+                            onPress={onOpen}
                         >
-                            <h2 className="text-2xl font-bold text-gray-100 mb-2">{trip.title}</h2>
-                            <p className="text-gray-400 text-sm mb-4 line-clamp-2">
-                                {trip.description}
-                            </p>
-                            <div className="flex items-center text-sm text-blue-300 font-medium">
-                                <span>📅 {trip.start_date}</span>
-                                <span className="mx-2">➔</span>
-                                <span>{trip.end_date}</span>
-                            </div>
-                        </Link>
-                    ))}
+                            + New Trip
+                        </Button>
+                    </NavbarItem>
+                    <NavbarItem>
+                        <Button 
+                            color="danger" 
+                            variant="light" 
+                            className="font-semibold"
+                            onPress={handleLogout}
+                        >
+                            Log Out
+                        </Button>
+                    </NavbarItem>
+                </NavbarContent>
+            </Navbar>
+
+            <main className="max-w-7xl mx-auto p-8">
+                {/* --- HEADER --- */}
+                <div className="mb-12">
+                    <h1 className="text-5xl font-black mb-4 tracking-tighter">
+                        My <span className="text-primary">Adventures</span>
+                    </h1>
+                    <p className="text-default-500 text-lg max-w-2xl">
+                        Manage your upcoming travels, discover new destinations, and keep track of your journey across the globe.
+                    </p>
                 </div>
-            )}
+
+                {/* --- TRIPS GRID --- */}
+                {trips.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                        <div className="bg-white/5 p-8 rounded-full mb-6">
+                            <span className="text-6xl">🌍</span>
+                        </div>
+                        <p className="text-xl font-bold text-white mb-2">No trips planned yet</p>
+                        <p className="text-default-400 mb-6">Start your journey by creating your first trip.</p>
+                        <Button color="primary" size="lg" onPress={onOpen}>Create Your First Trip</Button>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {trips.map(trip => (
+                            <Card 
+                                key={trip.id} 
+                                isPressable 
+                                as={Link} 
+                                to={`/trip/${trip.id}`}
+                                className="bg-white/5 border border-white/10 hover:border-primary/50 transition-all duration-300 group"
+                            >
+                                <CardHeader className="flex-col items-start px-6 pt-6">
+                                    <div className="flex justify-between w-full items-start mb-2">
+                                        <h2 className="text-2xl font-bold group-hover:text-primary transition-colors line-clamp-1">{trip.title}</h2>
+                                    </div>
+                                    <p className="text-default-500 text-sm line-clamp-2 h-10">{trip.description}</p>
+                                </CardHeader>
+                                <CardBody className="px-6 py-4">
+                                    <div className="flex gap-2">
+                                        <Chip 
+                                            variant="flat" 
+                                            color="primary" 
+                                            size="sm"
+                                            className="bg-primary/10 text-primary"
+                                        >
+                                            📅 {trip.start_date}
+                                        </Chip>
+                                        <Chip 
+                                            variant="flat" 
+                                            color="secondary" 
+                                            size="sm"
+                                            className="bg-secondary/10 text-secondary"
+                                        >
+                                            ➔ {trip.end_date}
+                                        </Chip>
+                                    </div>
+                                </CardBody>
+                                <CardFooter className="px-6 pb-6">
+                                    <Button 
+                                        fullWidth 
+                                        variant="bordered" 
+                                        className="border-white/10 group-hover:border-primary/50 group-hover:bg-primary/10"
+                                    >
+                                        View Details
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        ))}
+                    </div>
+                )}
+            </main>
+
+            {/* --- CREATE TRIP MODAL --- */}
+            <Modal 
+                isOpen={isOpen} 
+                onOpenChange={onOpenChange} 
+                backdrop="blur"
+                classNames={{
+                    base: "bg-zinc-900 border border-white/10",
+                    header: "border-b border-white/10",
+                    footer: "border-t border-white/10",
+                }}
+            >
+                <ModalContent>
+                    {(onClose) => (
+                        <>
+                            <ModalHeader className="flex flex-col gap-1 text-white">Plan a New Adventure</ModalHeader>
+                            <ModalBody className="py-6">
+                                <div className="flex flex-col gap-4">
+                                    <Input
+                                        label="Trip Title"
+                                        name="title"
+                                        placeholder="e.g., Summer in Kyoto"
+                                        variant="bordered"
+                                        value={formData.title}
+                                        onChange={handleChange}
+                                        isRequired
+                                    />
+                                    <Textarea
+                                        label="Description"
+                                        name="description"
+                                        placeholder="A brief summary of your trip"
+                                        variant="bordered"
+                                        value={formData.description}
+                                        onChange={handleChange}
+                                    />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Input
+                                            label="Start Date"
+                                            name="start_date"
+                                            type="date"
+                                            variant="bordered"
+                                            value={formData.start_date}
+                                            onChange={handleChange}
+                                            isRequired
+                                        />
+                                        <Input
+                                            label="End Date"
+                                            name="end_date"
+                                            type="date"
+                                            variant="bordered"
+                                            value={formData.end_date}
+                                            onChange={handleChange}
+                                            isRequired
+                                        />
+                                    </div>
+                                </div>
+                            </ModalBody>
+                            <ModalFooter>
+                                <Button variant="light" onPress={onClose} className="text-white">
+                                    Cancel
+                                </Button>
+                                <Button color="primary" onPress={() => handleSubmit(onClose)}>
+                                    Save Trip
+                                </Button>
+                            </ModalFooter>
+                        </>
+                    )}
+                </ModalContent>
+            </Modal>
         </div>
     );
 }
