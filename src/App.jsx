@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
 import TripDetail from './pages/TripDetail';
 import Login from './pages/Login';
+import MainLayout from './components/MainLayout';
 
 /**
  * Higher-order component to protect routes that require authentication.
@@ -36,7 +37,7 @@ function PublicRoute({ children }) {
 }
 
 /**
- * Main Application component defining the routing structure.
+ * Main Application component defining the routing structure and global layout.
  * 
  * @returns {JSX.Element}
  */
@@ -45,36 +46,38 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route
-          path="/"
-          element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />}
-        />
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <Login />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/trip/:id"
-          element={
-            <ProtectedRoute>
-              <TripDetail />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
+      <MainLayout>
+        <Routes>
+          <Route
+            path="/"
+            element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />}
+          />
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/trip/:id"
+            element={
+              <ProtectedRoute>
+                <TripDetail />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </MainLayout>
     </BrowserRouter>
   );
 }
