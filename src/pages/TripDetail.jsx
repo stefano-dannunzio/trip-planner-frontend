@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -7,15 +7,16 @@ import L from 'leaflet';
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { 
-    Button, 
-    Card, 
-    CardHeader, 
-    CardBody, 
-    Input, 
-    Textarea, 
-    ScrollShadow, 
+import {
+    Button,
+    Card,
+    CardHeader,
+    CardBody,
+    Input,
+    Textarea,
+    ScrollShadow,
     Divider,
+    Chip,
     Tooltip,
     Breadcrumbs,
     BreadcrumbItem
@@ -29,12 +30,6 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-/**
- * Component to handle map click events and update form coordinates.
- * 
- * @param {Object} props
- * @param {Function} props.setFormData
- */
 function LocationPicker({ setFormData }) {
     useMapEvents({
         click(e) {
@@ -48,13 +43,9 @@ function LocationPicker({ setFormData }) {
     return null;
 }
 
-/**
- * Component to display and manage details of a specific trip, including its itinerary.
- * 
- * @returns {JSX.Element}
- */
 function TripDetail() {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [trip, setTrip] = useState(null);
     const [itinerary, setItinerary] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -87,18 +78,10 @@ function TripDetail() {
             });
     }, [id]);
 
-    /**
-     * Handles input changes for the itinerary item form.
-     * @param {React.ChangeEvent<HTMLInputElement>} e 
-     */
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    /**
-     * Handles the addition of a new place to the itinerary.
-     * @param {React.FormEvent} e 
-     */
     const handleAddPlace = (e) => {
         e.preventDefault();
         if (!formData.latitude || !formData.longitude) {
@@ -117,10 +100,6 @@ function TripDetail() {
             .catch(error => console.error("Error saving place:", error));
     };
 
-    /**
-     * Handles reordering of itinerary items after a drag-and-drop operation.
-     * @param {Object} result 
-     */
     const handleOnDragEnd = (result) => {
         if (!result.destination) return;
 
@@ -136,10 +115,6 @@ function TripDetail() {
         });
     };
 
-    /**
-     * Handles the deletion of an itinerary item.
-     * @param {number} itemId 
-     */
     const handleDeletePlace = (itemId) => {
         if (window.confirm("Are you sure you want to remove this place from your itinerary?")) {
             api.delete(`itinerary/${itemId}/`)
@@ -147,6 +122,16 @@ function TripDetail() {
                     setItinerary(prevItinerary => prevItinerary.filter(item => item.id !== itemId));
                 })
                 .catch(error => console.error("Error deleting place:", error));
+        }
+    };
+
+    const handleDeleteTrip = () => {
+        if (window.confirm("Are you sure you want to delete this entire trip? This action cannot be undone.")) {
+            api.delete(`trips/${id}/`)
+                .then(() => {
+                    navigate('/dashboard');
+                })
+                .catch(error => console.error("Error deleting trip:", error));
         }
     };
 
@@ -168,15 +153,23 @@ function TripDetail() {
                         </BreadcrumbItem>
                         <BreadcrumbItem>{trip.title}</BreadcrumbItem>
                     </Breadcrumbs>
-                    
+
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                         <div>
                             <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-white">{trip.title}</h1>
                             <p className="text-default-500 text-lg mt-2 max-w-2xl">{trip.description}</p>
                         </div>
                         <div className="flex gap-2">
-                             <Button 
-                                color="primary" 
+                            <Button
+                                color="danger"
+                                variant="flat"
+                                onPress={handleDeleteTrip}
+                                className="font-bold"
+                            >
+                                Delete Trip
+                            </Button>
+                            <Button
+                                color="primary"
                                 variant={showForm ? "bordered" : "solid"}
                                 onPress={() => setShowForm(!showForm)}
                                 className="font-bold"
@@ -187,7 +180,7 @@ function TripDetail() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-250px)] min-h-[600px]">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow lg:h-[calc(100vh-250px)] min-h-[600px]">
                     {/* LEFT COLUMN: Itinerary (4/12) */}
                     <Card className="lg:col-span-4 bg-white/5 border border-white/10 flex flex-col h-full shadow-2xl">
                         <CardHeader className="flex justify-between items-center px-6 py-4 border-b border-white/10">
@@ -196,7 +189,7 @@ function TripDetail() {
                                 {itinerary.length} PLACES
                             </span>
                         </CardHeader>
-                        
+
                         <CardBody className="p-0 overflow-hidden flex flex-col">
                             {showForm && (
                                 <div className="p-6 bg-primary/5 border-b border-white/10">
@@ -204,30 +197,30 @@ function TripDetail() {
                                         <p className="text-xs text-primary font-bold uppercase tracking-wider mb-1">
                                             📍 Click the map to set location
                                         </p>
-                                        <Input 
-                                            label="Place Name" 
-                                            name="place_name" 
-                                            value={formData.place_name} 
-                                            onChange={handleInputChange} 
-                                            required 
+                                        <Input
+                                            label="Place Name"
+                                            name="place_name"
+                                            value={formData.place_name}
+                                            onChange={handleInputChange}
+                                            required
                                             variant="bordered"
                                             size="sm"
                                         />
-                                        <Input 
-                                            label="Visit Date" 
-                                            type="date" 
-                                            name="date" 
-                                            value={formData.date} 
-                                            onChange={handleInputChange} 
-                                            required 
+                                        <Input
+                                            label="Visit Date"
+                                            type="date"
+                                            name="date"
+                                            value={formData.date}
+                                            onChange={handleInputChange}
+                                            required
                                             variant="bordered"
                                             size="sm"
                                         />
-                                        <Textarea 
-                                            label="Notes" 
-                                            name="notes" 
-                                            value={formData.notes} 
-                                            onChange={handleInputChange} 
+                                        <Textarea
+                                            label="Notes"
+                                            name="notes"
+                                            value={formData.notes}
+                                            onChange={handleInputChange}
                                             variant="bordered"
                                             size="sm"
                                         />
@@ -260,7 +253,7 @@ function TripDetail() {
                                                             >
                                                                 <div className="flex items-center gap-4">
                                                                     <div {...provided.dragHandleProps} className="text-default-400 cursor-grab active:cursor-grabbing hover:text-white transition-colors">
-                                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+                                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1" /><circle cx="9" cy="5" r="1" /><circle cx="9" cy="19" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="15" cy="5" r="1" /><circle cx="15" cy="19" r="1" /></svg>
                                                                     </div>
                                                                     <div>
                                                                         <h4 className="font-bold text-white leading-tight group-hover:text-primary transition-colors">{item.place_name}</h4>
@@ -278,7 +271,7 @@ function TripDetail() {
                                                                         onPress={() => handleDeletePlace(item.id)}
                                                                         className="opacity-0 group-hover:opacity-100 transition-opacity"
                                                                     >
-                                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
                                                                     </Button>
                                                                 </Tooltip>
                                                             </div>
@@ -295,16 +288,16 @@ function TripDetail() {
                     </Card>
 
                     {/* RIGHT COLUMN: Map (8/12) */}
-                    <Card className="lg:col-span-8 bg-white/5 border border-white/10 p-2 shadow-2xl overflow-hidden relative group">
+                    <Card className="lg:col-span-8 bg-white/5 border border-white/10 p-2 shadow-2xl overflow-hidden relative group min-h-[400px] lg:min-h-0">
                         <div className="absolute top-6 left-6 z-[1000] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
                             <Chip color="primary" variant="shadow" className="font-bold border border-white/20">
                                 INTERACTIVE MAP
                             </Chip>
                         </div>
-                        <MapContainer 
-                            center={mapCenter} 
-                            zoom={13} 
-                            className="w-full h-full rounded-lg grayscale invert hue-rotate-180 contrast-125 saturate-50"
+                        <MapContainer
+                            center={mapCenter}
+                            zoom={13}
+                            className="w-full h-full rounded-lg"
                         >
                             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                             <LocationPicker setFormData={setFormData} />
